@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="30">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>63A Mona-Lisa-Steiner-Weg</title>
 <style>
@@ -110,34 +109,75 @@
   var last = loadStored();
   if (last) { render(last); }   // sofort etwas zeigen (ggf. veraltet)
 
-  getJsonRetry(relay, function (err, raw) {
-    if (!err && raw && (raw.wl || raw.weather)) {
-      store(raw);
-      render(raw);
-      return;
-    }
-    // Relay kaputt: Wetter direkt (Open-Meteo erlaubt CORS), WL aus letztem Stand
-    var fallback = {
-      wl: last ? last.wl : null,
-      wlAt: last ? last.wlAt : null,
-      wlError: "Relay: " + (err || "leere Antwort"),
-      weather: null, weatherAt: null, weatherError: ""
-    };
-    getJson(WEATHER_URL, function (werr, w) {
-      if (!werr) {
-        fallback.weather = w;
-        fallback.weatherAt = new Date().getTime();
-      } else {
-        fallback.weather = last ? last.weather : null;
-        fallback.weatherAt = last ? last.weatherAt : null;
-        fallback.weatherError = werr;
+  /*
+   * Kein Neuladen der ganzen Seite alle 30 s: Ein einziger WLAN-Aussetzer beim Neuladen
+   * würde sonst "Webseite nicht erreichbar" zeigen und das Dashboard wäre weg.
+   * Die Seite bleibt stehen, nur die Daten werden per XHR geholt; Fehler -> letzter Stand.
+   */
+  var busy = false;
+  function refresh() {
+    if (busy) { return; }
+    busy = true;
+    getJsonRetry(relay, function (err, raw) {
+      if (!err && raw && (raw.wl || raw.weather)) {
+        busy = false;
+        last = raw;
+        store(raw);
+        render(raw);
+        return;
       }
-      render(fallback);
+      // Relay nicht erreichbar: Wetter direkt (Open-Meteo erlaubt CORS), WL aus letztem Stand
+      var fallback = {
+        wl: last ? last.wl : null,
+        wlAt: last ? last.wlAt : null,
+        wlError: "Relay: " + (err || "leere Antwort"),
+        weather: null, weatherAt: null, weatherError: ""
+      };
+      getJson(WEATHER_URL, function (werr, w) {
+        busy = false;
+        if (!werr) {
+          fallback.weather = w;
+          fallback.weatherAt = new Date().getTime();
+        } else {
+          fallback.weather = last ? last.weather : null;
+          fallback.weatherAt = last ? last.weatherAt : null;
+          fallback.weatherError = werr;
+        }
+        render(fallback);
+      });
     });
-  });
+  }
 
-  // JS-Fallback, falls meta refresh nicht greift
-  setTimeout(function () { location.reload(); }, 45000);
+  refresh();
+  setInterval(refresh, 30000);
+
+  // Alle 6 h die Seite neu laden (Code-Updates, Speicher) – aber nur, wenn sie gerade erreichbar ist.
+  function reachable(url, cb) {
+    var done = false;
+    var xhr = new XMLHttpRequest();
+    var timer = setTimeout(function () {
+      if (done) { return; }
+      done = true;
+      try { xhr.abort(); } catch (e) {}
+      cb(false);
+    }, TIMEOUT_MS);
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4 || done) { return; }
+      done = true;
+      clearTimeout(timer);
+      cb(xhr.status === 200 && xhr.responseText.indexOf("core.js") > -1);
+    };
+    try {
+      xhr.open("GET", url + (url.indexOf("?") < 0 ? "?" : "&") + "_=" + new Date().getTime(), true);
+      xhr.send(null);
+    } catch (e) { done = true; clearTimeout(timer); cb(false); }
+  }
+
+  setInterval(function () {
+    reachable(location.href.split("#")[0], function (ok) {
+      if (ok) { location.reload(); }
+    });
+  }, 6 * 60 * 60 * 1000);
 }());
 </script>
 </body>
