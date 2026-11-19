@@ -1,84 +1,47 @@
 # Kindle E-Ink Dashboard – 63A Mona-Lisa-Steiner-Weg
 
-Ein minimalistisches, für E-Ink optimiertes Web-Dashboard, das auf einem Kindle im Heimnetzwerk läuft.
+Uhr + Datum (Europe/Vienna), Wiener Linien 63A in Echtzeit (Hero: Ri. Gesundheitszentrum Süd),
+Gegenrichtung, Störungen und Wetter (Open-Meteo). Schwarz/Weiß, Refresh alle 30 s.
 
-## Features
+## Aufbau
 
-| Feature | Detail |
-|---|---|
-| **Öffi-Echtzeitdaten** | Wiener Linien 63A ab Mona-Lisa-Steiner-Weg (Ri. Meidling Hauptstraße + Gesundheitszentrum Süd) |
-| **Countdown** | Minuten bis Abfahrt oder `JETZT` |
-| **Live/Plan** | LIVE-Badge wenn Echtzeitdaten verfügbar |
-| **Störungen** | Kurzstörungen der WL-API |
-| **Wetter** | Open-Meteo (kostenlos, kein API-Key): Temperatur, Gefühlt, Zustand, Min/Max, Wind |
-| **Uhrzeit** | Große Digitaluhr + Datum (Europe/Vienna) |
-| **Auto-Refresh** | alle 30 s via `<meta http-equiv="refresh">` + JS-Fallback |
+| Datei | Zweck |
+| --- | --- |
+| `docs/core.js` | **Gemeinsamer Kern in reinem ES5**: Parsing, Filter, Wien-Zeit (manuelle CET/CEST), HTML-Rendering, CSS. Wird vom Server *und* vom Kindle-Browser benutzt. |
+| `server.mjs` | Lokaler Server (Node ≥ 18, keine Dependencies). SSR-HTML für den Kindle, funktioniert ohne JS. |
+| `docs/index.html` | GitHub-Pages-Variante (ES5, XMLHttpRequest), holt Daten über ein Relay. |
+| `worker/relay.js` | Cloudflare Worker: WL + Wetter mit CORS-Header (nur für die Pages-Variante nötig). |
+| `kindle-dashboard.service` | systemd-User-Service (Autostart). |
+| `diag.mjs` | Netzwerk-Diagnose (fetch vs. https.get, IPv4/IPv6, `err.cause`, CORS-Header). |
+| `test.mjs` | Tests (`node --test test.mjs`). |
 
-## Voraussetzungen
-
-- Node.js ≥ 18 (natives `fetch`)
-- Heimnetzwerk-Zugang vom Kindle zum Server-Rechner
-
-## Installation & Start
+## Lokaler Server (empfohlen)
 
 ```bash
-cd bus
-npm install
-node server.js
+node server.mjs                     # manuell
+systemctl --user status kindle-dashboard     # als Service (Autostart, läuft dank Linger auch ohne Login)
+systemctl --user restart kindle-dashboard    # nach Code-Änderungen
+journalctl --user -u kindle-dashboard -f     # Logs
 ```
 
-Dashboard ist dann unter `http://<IP-des-Servers>:3000` erreichbar.
+Endpunkte: `/` (Kindle), `/healthz` (Cache-Alter, letzte Fehler), `/api/raw` (JSON mit CORS),
+`/pages/?relay=/api/raw` (Pages-Variante lokal testen).
 
-## Kindle einrichten
+Robustheit: IPv4-only, 15 s Timeout, 2 Retries (1 s / 3 s), Fehler mit `err.cause` geloggt.
+Bei Fehlern wird der letzte gültige Stand ausgeliefert (Countdown wird nachgezogen, ab 90 s „VERALTET“).
+Eine Kindle-Anfrage wartet höchstens 4 s auf frische Daten, sonst kommt der Cache.
 
-1. Kindle-Browser öffnen (Experimental Browser)
-2. URL eingeben: `http://192.168.x.x:3000` (eigene LAN-IP)
-3. Die Seite lädt alle 30 Sekunden automatisch neu
+Firewall (einmalig): `sudo ufw allow from 192.168.178.0/24 to any port 3000 proto tcp`
 
-## API-Details
+Kindle: Experimental Browser → `http://192.168.178.28:3000/`
 
-| API | Cache | Auth |
-|---|---|---|
-| `wienerlinien.at/ogd_realtime/monitor` | 20 s | keine |
-| `api.open-meteo.com` | 10 min | keine |
+## GitHub-Pages-Variante (ohne laufenden PC)
 
-## Systemd-Service (Linux-Server)
+Die WL-API sendet **keinen** CORS-Header → direkter Browser-Aufruf von github.io geht nicht (getestet).
+Open-Meteo erlaubt CORS. Daher Relay nötig:
 
-```ini
-# /etc/systemd/system/kindle-dashboard.service
-[Unit]
-Description=Kindle E-Ink Dashboard
-After=network.target
+1. dash.cloudflare.com → Workers & Pages → Create Worker → Code aus `worker/relay.js` einfügen → Deploy
+2. Worker-URL in `docs/index.html` bei `RELAY_URL` eintragen (oder `?relay=<url>` an die Seiten-URL hängen)
+3. `docs/` ins Repo pushen (Pages-Quelle `/docs`)
 
-[Service]
-Type=simple
-User=pi
-WorkingDirectory=/home/pi/bus
-ExecStart=/usr/bin/node server.js
-Restart=always
-RestartSec=5
-Environment=NODE_ENV=production
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable kindle-dashboard
-sudo systemctl start kindle-dashboard
-sudo journalctl -u kindle-dashboard -f
-```
-
-## RBL-Nummern anpassen
-
-Falls die Haltestellen-IDs sich ändern, können diese über die [Wiener Linien OGD-Haltestellenliste](https://www.data.gv.at/katalog/dataset/wiener-linien-echtzeitdaten) nachgeschlagen werden. Die RBL-Nummern stehen in `server.js` in der Konstante `WL_RBL_IDS`.
-
-## Projektstruktur
-
-```
-bus/
-├── package.json
-├── server.js       ← Haupt-Server (Express + SSR)
-└── README.md
-```
+Fällt das Relay aus, zeigt die Seite den letzten Stand aus localStorage und holt das Wetter direkt.

@@ -1,0 +1,17 @@
+[Unit]
+Description=Kindle E-Ink Dashboard (63A Mona-Lisa-Steiner-Weg + Wetter), im WLAN auf Port 3000
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/gabriel/Dokumente/obsidian/bus
+Environment=PORT=3000
+# 0.0.0.0, damit der Kindle im WLAN zugreifen kann (127.0.0.1 wäre nur lokal).
+Environment=HOST=0.0.0.0
+ExecStart=/usr/bin/node /home/gabriel/Dokumente/obsidian/bus/server.mjs
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
