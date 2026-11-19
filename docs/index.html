@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>63A – Mona-Lisa-Steiner-Weg</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #ffffff;
+      color: #000000;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 16px;
+      line-height: 1.4;
+      padding: 10px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ── Clock header ── */
+    .header {
+      border: 3px solid #000;
+      padding: 8px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    .clock {
+      font-size: 3.2em;
+      font-weight: bold;
+      letter-spacing: 2px;
+      font-family: "Courier New", Courier, monospace;
+    }
+    .date { font-size: 1em; font-weight: bold; }
+
+    /* ── Section bar ── */
+    .section-title {
+      background: #000;
+      color: #fff;
+      padding: 4px 8px;
+      font-size: 1em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    /* ── HERO box ── */
+    .hero-box {
+      border: 4px solid #000;
+      padding: 12px 16px 10px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .hero-label {
+      font-size: 1em;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .hero-countdown { line-height: 1; margin: 6px 0; }
+    .hero-min {
+      font-size: 5.5em;
+      font-weight: bold;
+      font-family: "Courier New", Courier, monospace;
+    }
+    .hero-unit {
+      font-size: 2em;
+      font-weight: bold;
+      font-family: "Courier New", Courier, monospace;
+      margin-left: 6px;
+    }
+    .hero-jetzt {
+      display: inline-block;
+      font-size: 4em;
+      font-weight: bold;
+      font-family: "Courier New", Courier, monospace;
+      background: #000;
+      color: #fff;
+      padding: 4px 16px;
+    }
+    .hero-sub {
+      font-size: 1.2em;
+      font-family: "Courier New", Courier, monospace;
+      margin-top: 4px;
+    }
+
+    /* ── Next departures table ── */
+    .next-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .next-table td { border: 1px solid #000; padding: 4px 8px; }
+    .td-cd2   { text-align: center; width: 50px; font-family: "Courier New", Courier, monospace; font-weight: bold; }
+    .td-time2 { text-align: center; width: 60px; font-family: "Courier New", Courier, monospace; }
+    .td-badge2{ text-align: center; width: 50px; }
+    .td-dir2  { font-size: 0.85em; }
+
+    /* ── Secondary direction ── */
+    .sec-title {
+      border-top: 2px solid #000;
+      border-bottom: 1px solid #000;
+      padding: 3px 8px;
+      font-size: 0.85em;
+      font-weight: bold;
+      margin-bottom: 4px;
+      margin-top: 6px;
+    }
+
+    /* ── Badges ── */
+    .jetzt {
+      display: inline-block;
+      background: #000; color: #fff;
+      font-weight: bold; font-size: 0.8em;
+      padding: 1px 4px;
+    }
+    .live {
+      display: inline-block;
+      background: #000; color: #fff;
+      border: 2px solid #000;
+      padding: 1px 4px;
+      font-size: 0.72em; font-weight: bold; letter-spacing: 1px;
+    }
+    .plan {
+      display: inline-block;
+      border: 2px solid #000;
+      padding: 1px 4px;
+      font-size: 0.72em; font-weight: bold; letter-spacing: 1px;
+    }
+
+    /* ── Status messages ── */
+    .status-err { border: 3px solid #000; padding: 10px 14px; font-weight: bold; margin: 8px 0; }
+    .status-ok  { border: 2px solid #000; padding: 10px 14px; margin: 8px 0; }
+
+    /* ── Traffic info ── */
+    .traffic-box {
+      border: 3px solid #000; padding: 6px 10px;
+      margin-bottom: 8px; font-size: 0.88em;
+    }
+    .traffic-box ul { margin-left: 18px; }
+
+    /* ── Weather ── */
+    .weather-section { margin-top: 8px; }
+    .weather-row {
+      border: 2px solid #000; padding: 7px 12px;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 0.92em;
+    }
+    .w-icon  { font-size: 1.8em; }
+    .w-temp  { font-size: 1.8em; font-weight: bold; font-family: "Courier New", Courier, monospace; }
+    .w-cond  { font-weight: bold; font-size: 1em; }
+    .w-feels, .w-range, .w-wind { border-left: 2px solid #000; padding-left: 8px; font-size: 0.9em; }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 2px solid #000; margin-top: 8px; padding-top: 5px;
+      font-size: 0.72em; display: flex; justify-content: space-between;
+    }
+
+    .stale { display: block; font-size: 0.72em; font-style: italic; margin-top: 3px; }
+    .hero-min, .hero-jetzt, .clock { -webkit-user-select: none; user-select: none; }
+
+    /* Loading state */
+    .loading { text-align: center; padding: 30px; font-size: 1.2em; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span class="clock" id="clock">--:--</span>
+    <span class="date" id="date">...</span>
+  </div>
+
+  <div id="bus-section">
+    <div class="section-title">🚌 63A – Nächste Abfahrt</div>
+    <div class="loading">Lade Echtzeitdaten…</div>
+  </div>
+
+  <div class="weather-section" id="weather-section">
+    <div class="section-title">🌡 Wetter – 1120 Wien</div>
+    <div class="loading">Lade Wetterdaten…</div>
+  </div>
+
+  <div class="footer">
+    <span id="updated">–</span>
+    <span>Auto-Refresh: 30s</span>
+  </div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const RBL_PRIMARY   = 3890; // Mona-Lisa-Steiner-Weg → Gesundheitszentrum Süd
+const RBL_SECONDARY = 3889; // Mona-Lisa-Steiner-Weg → Am Rosenhügel
+const PRIMARY_KEYWORD = "Gesundheitszentrum";
+
+const WL_URL = `https://www.wienerlinien.at/ogd_realtime/monitor?rbl=${RBL_PRIMARY}&rbl=${RBL_SECONDARY}&activateTrafficInfo=stoerungkurz`;
+const WEATHER_URL = "https://api.open-meteo.com/v1/forecast?latitude=48.1595&longitude=16.2957" +
+  "&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,winddirection_10m" +
+  "&daily=temperature_2m_max,temperature_2m_min&timezone=Europe%2FVienna&forecast_days=1";
+
+const WMO = {
+  0:["Klarer Himmel","☀"], 1:["Überwiegend klar","🌤"], 2:["Teilweise bewölkt","⛅"],
+  3:["Bedeckt","☁"], 45:["Neblig","🌫"], 48:["Reif-Nebel","🌫"],
+  51:["Leichter Nieselregen","🌦"], 53:["Mäßiger Nieselregen","🌦"], 55:["Starker Nieselregen","🌧"],
+  61:["Leichter Regen","🌧"], 63:["Mäßiger Regen","🌧"], 65:["Starker Regen","🌧"],
+  71:["Leichter Schnee","❄"], 73:["Mäßiger Schnee","❄"], 75:["Starker Schnee","❄"],
+  80:["Regenschauer","🌦"], 81:["Mäßige Schauer","🌧"], 82:["Starke Schauer","⛈"],
+  95:["Gewitter","⛈"], 96:["Gewitter+Hagel","⛈"], 99:["Schwerer Hagel","⛈"],
+};
+
+const WIND_DIRS = ["N","NO","O","SO","S","SW","W","NW"];
+function degToArrow(d) { return WIND_DIRS[Math.round(d / 45) % 8]; }
+
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function viennaFmt(opts) {
+  return new Date().toLocaleString("de-AT", { timeZone: "Europe/Vienna", ...opts });
+}
+function fmtTime(iso) {
+  if (!iso) return "–";
+  return new Date(iso).toLocaleTimeString("de-AT", {
+    timeZone: "Europe/Vienna", hour: "2-digit", minute: "2-digit"
+  });
+}
+function badge(isLive) {
+  return isLive
+    ? '<span class="live">LIVE</span>'
+    : '<span class="plan">PLAN</span>';
+}
+
+// ── Clock tick ───────────────────────────────────────────────────────────────
+function tickClock() {
+  document.getElementById("clock").textContent = viennaFmt({ hour:"2-digit", minute:"2-digit" });
+  document.getElementById("date").textContent  = viennaFmt({
+    weekday:"long", day:"2-digit", month:"long", year:"numeric"
+  });
+}
+tickClock();
+setInterval(tickClock, 10000);
+
+// ── Fetch with timeout ───────────────────────────────────────────────────────
+async function fetchJSON(url, ms) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms || 8000);
+  try {
+    const r = await fetch(url, { signal: ctrl.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(id); }
+}
+
+// ── Bus data ─────────────────────────────────────────────────────────────────
+async function loadBus() {
+  const section = document.getElementById("bus-section");
+  try {
+    const json = await fetchJSON(WL_URL);
+    const monitors = json?.data?.monitors ?? [];
+
+    // Traffic infos
+    const infoSet = new Set();
+    const infos = [];
+    for (const mon of monitors) {
+      const tj = mon.lines?.[0]?.trafficjam;
+      for (const ti of (Array.isArray(tj) ? tj : [])) {
+        if (!infoSet.has(ti.refTrafficInfoId)) {
+          infoSet.add(ti.refTrafficInfoId);
+          infos.push(ti.title ?? "Störung");
+        }
+      }
+    }
+    for (const ti of json?.data?.trafficInfos ?? []) {
+      const t = ti.attributes?.title ?? "";
+      if (t && !infoSet.has(t)) { infoSet.add(t); infos.push(t); }
+    }
+
+    // Departures
+    const deps = [];
+    for (const mon of monitors) {
+      for (const line of mon.lines ?? []) {
+        if (line.name !== "63A") continue;
+        for (const dep of line.departures?.departure ?? []) {
+          const dt = dep.departureTime;
+          if (!dt || dt.countdown < -1) continue;
+          deps.push({
+            towards:     line.towards ?? "",
+            countdown:   dt.countdown ?? 0,
+            timePlanned: dt.timePlanned,
+            timeReal:    dt.timeReal,
+            displayTime: dt.timeReal ?? dt.timePlanned,
+            isLive:      !!dt.timeReal,
+          });
+        }
+      }
+    }
+    deps.sort((a, b) => a.countdown - b.countdown);
+
+    const primary   = deps.filter(d => d.towards.includes(PRIMARY_KEYWORD) && d.countdown <= 90);
+    const secondary = deps.filter(d => !d.towards.includes(PRIMARY_KEYWORD) && d.countdown <= 70);
+
+    // Traffic box
+    let html = '<div class="section-title">🚌 63A – Nächste Abfahrt</div>';
+    if (infos.length) {
+      html += `<div class="traffic-box"><strong>⚠ Störungen:</strong><ul>${infos.map(i=>`<li>${esc(i)}</li>`).join("")}</ul></div>`;
+    }
+
+    // Hero
+    if (primary.length === 0) {
+      html += `<p class="status-ok">🌙 Derzeit keine Abfahrten Ri. <strong>Gesundheitszentrum Süd</strong> in den nächsten 90 Min.</p>`;
+    } else {
+      const n = primary[0];
+      const heroCountdown = n.countdown <= 0
+        ? '<span class="hero-jetzt">JETZT</span>'
+        : `<span class="hero-min">${n.countdown}</span><span class="hero-unit">min</span>`;
+      html += `
+        <div class="hero-box">
+          <div class="hero-label">Ri. Gesundheitszentrum Süd</div>
+          <div class="hero-countdown">${heroCountdown}</div>
+          <div class="hero-sub">${badge(n.isLive)} &nbsp; ${fmtTime(n.displayTime)} Uhr</div>
+        </div>`;
+      // Next 3
+      const nextRows = primary.slice(1,4).map(d => {
+        const cd = d.countdown <= 0 ? '<span class="jetzt">JETZT</span>' : d.countdown + "&prime;";
+        return `<tr><td class="td-cd2">${cd}</td><td class="td-time2">${fmtTime(d.displayTime)}</td><td class="td-badge2">${badge(d.isLive)}</td></tr>`;
+      }).join("");
+      if (nextRows) html += `<table class="next-table"><tbody>${nextRows}</tbody></table>`;
+    }
+
+    // Secondary direction
+    if (secondary.length) {
+      const rows = secondary.slice(0,4).map(d => {
+        const cd = d.countdown <= 0 ? '<span class="jetzt">JETZT</span>' : d.countdown + "&prime;";
+        return `<tr><td class="td-cd2">${cd}</td><td class="td-time2">${fmtTime(d.displayTime)}</td><td class="td-badge2">${badge(d.isLive)}</td><td class="td-dir2">${esc(d.towards)}</td></tr>`;
+      }).join("");
+      html += `<div class="sec-title">↩ Am Rosenhügel / Meidling</div><table class="next-table"><tbody>${rows}</tbody></table>`;
+    }
+
+    section.innerHTML = html;
+  } catch (err) {
+    section.innerHTML = `<div class="section-title">🚌 63A – Nächste Abfahrt</div><p class="status-err">⚠ Echtzeitdaten nicht verfügbar.<br><small>${esc(err.message)}</small></p>`;
+  }
+}
+
+// ── Weather data ─────────────────────────────────────────────────────────────
+async function loadWeather() {
+  const section = document.getElementById("weather-section");
+  try {
+    const json = await fetchJSON(WEATHER_URL);
+    const c = json?.current ?? {};
+    const d = json?.daily  ?? {};
+    const code = c.weathercode ?? 0;
+    const [condition, icon] = WMO[code] ?? ["Unbekannt","?"];
+    const temp     = Math.round(c.temperature_2m ?? 0);
+    const feels    = Math.round(c.apparent_temperature ?? 0);
+    const wind     = Math.round(c.windspeed_10m ?? 0);
+    const windDir  = degToArrow(c.winddirection_10m ?? 0);
+    const tMax     = Math.round((d.temperature_2m_max ?? [0])[0]);
+    const tMin     = Math.round((d.temperature_2m_min ?? [0])[0]);
+
+    section.innerHTML = `
+      <div class="section-title">🌡 Wetter – 1120 Wien</div>
+      <div class="weather-row">
+        <span class="w-icon">${icon}</span>
+        <span class="w-temp">${temp}°C</span>
+        <span class="w-cond">${esc(condition)}</span>
+        <span class="w-feels">Gefühlt ${feels}°C</span>
+        <span class="w-range">↓${tMin}° ↑${tMax}°</span>
+        <span class="w-wind">Wind ${wind} km/h ${windDir}</span>
+      </div>`;
+  } catch (err) {
+    section.innerHTML = `<div class="section-title">🌡 Wetter – 1120 Wien</div><p class="status-err">⚠ Wetterdaten nicht verfügbar.</p>`;
+  }
+}
+
+// ── Refresh loop ─────────────────────────────────────────────────────────────
+async function refresh() {
+  await Promise.all([loadBus(), loadWeather()]);
+  document.getElementById("updated").textContent =
+    "Aktualisiert: " + viennaFmt({ day:"2-digit", month:"2-digit", year:"numeric",
+                                    hour:"2-digit", minute:"2-digit", second:"2-digit" });
+}
+
+// Initial load + every 30 s
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
