@@ -44,6 +44,17 @@
   st.appendChild(document.createTextNode(Dash.CSS));
   document.getElementsByTagName("head")[0].appendChild(st);
 
+  // Auf den Bildschirm hochskalieren: Layout ist für 758x1024 gebaut, der Paperwhite-Browser ist größer.
+  function fit() {
+    var de = document.documentElement;
+    var w = window.innerWidth || de.clientWidth;
+    var h = window.innerHeight || de.clientHeight;
+    var s = Math.min(w / Dash.CFG.designW, h / Dash.CFG.designH);
+    document.body.style.zoom = s > 1.02 ? String(Math.floor(s * 100) / 100) : "";
+  }
+  fit();
+  window.onresize = fit;
+
   function param(name) {
     var m = new RegExp("[?&]" + name + "=([^&#]*)").exec(location.search);
     return m ? decodeURIComponent(m[1].replace(/\+/g, " ")) : null;

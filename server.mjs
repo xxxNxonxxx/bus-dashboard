@@ -198,6 +198,10 @@ function page(body) {
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
     "<title>63A Mona-Lisa-Steiner-Weg</title><style>" + Dash.CSS + "</style></head><body>" +
     body +
+    // optional: auf größere Bildschirme hochskalieren (ohne JS bleibt es bei 758 px Layout)
+    "<script>(function(){var d=document.documentElement,w=window.innerWidth||d.clientWidth," +
+    "h=window.innerHeight||d.clientHeight,s=Math.min(w/" + Dash.CFG.designW + ",h/" + Dash.CFG.designH + ");" +
+    "if(s>1.02){document.body.style.zoom=String(Math.floor(s*100)/100);}})();</script>" +
     // JS-Fallback, falls meta refresh ausfällt (Seite funktioniert auch ganz ohne JS)
     `<script>setTimeout(function(){location.reload();},${(REFRESH_SEC + 15) * 1000});</script>` +
     "</body></html>"

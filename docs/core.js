@@ -24,7 +24,9 @@
     secondaryMax: 70,
     nextPrimary: 2,
     nextSecondary: 2,
-    staleAfterSec: 90     // ab diesem Datenalter "VERALTET" anzeigen
+    staleAfterSec: 90,    // ab diesem Datenalter "VERALTET" anzeigen
+    designW: 758,         // Layout-Grundgröße; größere Bildschirme werden per zoom skaliert
+    designH: 1024
   };
 
   var WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
@@ -355,7 +357,8 @@
   function buildModel(raw, now) {
     raw = raw || {};
     var wl = parseWl(raw.wl, raw.wlAt, now);
-    var wlAge = raw.wlAt ? Math.round((now - raw.wlAt) / 1000) : null;
+    // max(0, …): Geräteuhr kann ein paar Sekunden vorgehen
+    var wlAge = raw.wlAt ? Math.max(0, Math.round((now - raw.wlAt) / 1000)) : null;
     return {
       now: now,
       time: hhmm(now),
