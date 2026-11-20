@@ -73,8 +73,8 @@ test("Filter, Sortierung, Hero/JETZT, LIVE/PLAN, Störungen", () => {
   assert.match(html, /<div class="big now">JETZT<\/div>/);
   assert.match(html, /ab 18:02 <span class="b plan">PLAN/);
   assert.match(html, /Wetter nicht verfügbar/);
-  // 3 Folgeabfahrten primär + 3 sekundär (max 4)
-  assert.equal((html.match(/<tr><td class="cd">/g) || []).length, 6);
+  // je 2 Folgeabfahrten pro Richtung
+  assert.equal((html.match(/<tr><td class="cd">/g) || []).length, 4);
 });
 
 test("Veralteter Cache: Countdown wird nachgezogen und markiert", () => {
@@ -97,5 +97,27 @@ test("Wetter", () => {
     current: { temperature_2m: 6.6, apparent_temperature: 3.2, weathercode: 61, windspeed_10m: 14.4, winddirection_10m: 230 },
     daily: { temperature_2m_max: [8.9], temperature_2m_min: [-0.4] },
   });
-  assert.deepEqual(w, { temp: 7, feels: 3, text: "Leichter Regen", min: 0, max: 9, wind: 14, windDir: "SW" });
+  assert.deepEqual(w, { code: 61, temp: 7, feels: 3, text: "Leichter Regen", min: 0, max: 9, wind: 14, windDir: "SW" });
+});
+
+test("Outfit nach Temperatur/Wetter + Figur", () => {
+  const noon = Date.UTC(2026, 6, 1, 10, 0); // 12:00 Wien
+  const night = Date.UTC(2026, 6, 1, 21, 0);
+  const o = (feels, code, t = noon) => Dash.outfit({ feels, temp: feels, code }, t);
+  assert.equal(o(-3, 3).level, "winter");
+  assert.match(o(-3, 3).text, /Handschuhe/);
+  assert.equal(o(5, 3).level, "warm");
+  assert.equal(o(10, 3).level, "jacket");
+  assert.equal(o(16, 3).level, "pulli");
+  assert.equal(o(21, 3).level, "shirt");
+  assert.equal(o(28, 0).level, "hot");
+  assert.match(o(28, 0).text, /Sonnenbrille, Kappe/);
+  assert.doesNotMatch(o(28, 0, night).text, /Sonnenbrille/);
+  assert.match(o(10, 63).text, /Regenschirm, Gummistiefel/);
+  assert.match(o(-2, 73).text, /Winterstiefel/);
+  for (const lv of [o(-3, 73), o(5, 61), o(10, 3), o(16, 3), o(21, 0), o(28, 0)]) {
+    const svg = Dash.figureSvg(lv);
+    assert.match(svg, /^<svg[^>]*>.*<\/svg>$/s);
+    assert.equal((svg.match(/<g/g) || []).length, (svg.match(/<\/g>/g) || []).length);
+  }
 });
